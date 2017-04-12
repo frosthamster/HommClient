@@ -1,8 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using HoMM;
-using HoMM.ClientClasses;
 
 namespace Homm.Client
 {
@@ -21,7 +17,7 @@ namespace Homm.Client
                 {
                     controller.DoBestStep();
                 }
-                catch (CVARC.V2.ClientException e)
+                catch (CVARC.V2.ClientException)
                 {
                     Console.WriteLine("----------------------------------------");
                     Console.WriteLine("Game finished");

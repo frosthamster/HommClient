@@ -154,6 +154,11 @@ namespace Homm.Client
             return result;
         }
 
+        public IEnumerable<SearchResult> FindPathsToBoundaryPointsOfWarFog(Node start, Dictionary<UnitType, int> heroArmy)
+        {
+            return FindPathsToObjects(start, heroArmy, e => e.IsBoundaryPointOfWarFog);
+        }
+
         public IEnumerable<SearchResult> FindPathsToArmies(Node start, Dictionary<UnitType, int> heroArmy)
         {
             return FindPathsToObjects(start, heroArmy, e => e.GetArmy() != null);

@@ -45,7 +45,8 @@ namespace Homm.Client
             {
                 GetBestPathToArmy(),
                 GetBestPathToBarrack(),
-                GetBestPathToMine()
+                GetBestPathToMine(),
+                GetBestPathToBoundaryPointOfWarFog()
             };
             var resourceBunchPath = GetBestPathToResurceBunch();
             var bestNotResourcePath = options.OrderByDescending(e => e).FirstOrDefault();
@@ -114,6 +115,12 @@ namespace Homm.Client
         }
 
         #region ChooseBestPath
+
+        private Path GetBestPathToBoundaryPointOfWarFog()
+        {
+            var results = Graph.FindPathsToBoundaryPointsOfWarFog(Location, Data.MyArmy);
+            return GetMostProfitablePath(results.Select(CreatePath));
+        }
 
         private Path GetBestPathToBarrack()
         {

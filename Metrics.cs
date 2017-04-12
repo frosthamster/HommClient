@@ -23,17 +23,18 @@ namespace Homm.Client
                     profit += GetMineMetric(sensorData.WorldCurrentTime, treasury, node, sensorData.MyRespawnSide);
                 if (data.ResourcePile != null)
                     profit += GetResourceMetric(data.ResourcePile.Resource);
+                if (node.IsBoundaryPointOfWarFog)
+                    profit += GetBoundaryPointOfWarFogMetric();
 
                 var enemyArmy = node.GetArmy();
-                if (enemyArmy != null)
+
+                if (enemyArmy == null) continue;
+                if (Combat.Resolve(new ArmiesPair(sensorData.MyArmy, enemyArmy)).IsAttackerWin)
+                    profit += GetArmyMetric(enemyArmy);
+                else
                 {
-                    if (Combat.Resolve(new ArmiesPair(sensorData.MyArmy, enemyArmy)).IsAttackerWin)
-                        profit += GetArmyMetric(enemyArmy);
-                    else
-                    {
-                        profit = 0;
-                        break;
-                    }
+                    profit = 0;
+                    break;
                 }
             }
             if (bunch != null)
@@ -42,11 +43,16 @@ namespace Homm.Client
             return profit / GetPathCost(path.NodeChain);
         }
 
-        private static double GetBarrackMetric(Node location, Dictionary<Resource, int> treasury)
+        private static double GetBoundaryPointOfWarFogMetric()
         {
-            if (location.Data.Dwelling == null)
+            return 1;
+        }
+
+        private static double GetBarrackMetric(Node dwellingLocation, Dictionary<Resource, int> treasury)
+        {
+            if (dwellingLocation.Data.Dwelling == null)
                 throw new ArgumentException();
-            var barrack = location.Data.Dwelling;
+            var barrack = dwellingLocation.Data.Dwelling;
             var availableToBuy = Math.Min(GetAvailableToBuy(barrack.UnitType, treasury), barrack.AvailableToBuyCount);
             var speciarResource = ResourceTypes[barrack.UnitType];
             treasury[speciarResource] -= availableToBuy * UnitsConstants.Current.UnitCost[barrack.UnitType][speciarResource];
@@ -57,11 +63,11 @@ namespace Homm.Client
             return profit;
         }
 
-        private static double GetMineMetric(double currentTime, Dictionary<Resource, int> treasury, Node location, string heroSide)
+        private static double GetMineMetric(double currentTime, Dictionary<Resource, int> treasury, Node mineLocation, string heroSide)
         {
-            if (location.Data.Mine == null)
+            if (mineLocation.Data.Mine == null)
                 throw new ArgumentException();
-            var mine = location.Data.Mine;
+            var mine = mineLocation.Data.Mine;
             var profit = PrioritiesConstants.EstimatedMiningTime * (90 - currentTime) * HommRules.Current.MineOwningDailyScores;
             profit *= mine.Resource == Resource.Gold ? PrioritiesConstants.GoldMinePriority : 1;
             profit *= GetAvailableToBuy(UnitTypes[mine.Resource], treasury) > 5 ? PrioritiesConstants.MineDepreciation : 1;
