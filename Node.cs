@@ -36,14 +36,7 @@ namespace Homm.Client
             return Data.Location.ToLocation().GetDirectionTo(destination.Data.Location.ToLocation());
         }
 
-        public IEnumerable<Node> IncidentNodes
-        {
-            get
-            {
-                foreach (var node in incidentNodes)
-                    yield return node;
-            }
-        }
+        public IEnumerable<Node> IncidentNodes => incidentNodes;
 
         public bool Equals(Node other)
         {

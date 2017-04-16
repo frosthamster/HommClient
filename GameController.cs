@@ -32,44 +32,51 @@ namespace Homm.Client
             Graph = new Graph(Data.Map);
         }
 
-        public void DoBestStep()
+        public void MakeBestStep()
         {
             if (Data.IsDead)
             {
-                Data = client.Wait(0.1);
-                UpdateGraph();
+                Wait(0.1);
                 return;
             }
 
-            var options = new List<Path>
-            {
-                GetBestPathToArmy(),
-                GetBestPathToBarrack(),
-                GetBestPathToMine(),
-                GetBestPathToBoundaryPointOfWarFog()
-            };
-            var resourceBunchPath = GetBestPathToResurceBunch();
-            var bestNotResourcePath = options.OrderByDescending(e => e).FirstOrDefault();
+            var resourceBunchPath = GetBestPathToResourceBunch();
 
-            var bestPath = resourceBunchPath?.Rationality > bestNotResourcePath?.Rationality ?
-                resourceBunchPath.SearchResult : bestNotResourcePath?.SearchResult;
-            Move(bestPath?.Track);
+            var possibleChoices = new List<Path>
+            {
+                GetBestPathToEnemyArmy(),
+                GetBestPathToDwelling(),
+                GetBestPathToMine(),
+                GetBestPathToBoundaryPointOfWarFog(),
+                resourceBunchPath
+            };
+            var bestPath = possibleChoices.OrderByDescending(e => e).FirstOrDefault();
+
+            if (bestPath?.Rationality > 0)
+                Move(bestPath.SearchResult.Track);
+            else
+                Wait(0.1);
+
             if (resourceBunchPath != null && resourceBunchPath.ResourceBunch.Contains(Location))
                 GatherResourceBunch(resourceBunchPath.ResourceBunch);
+        }
+
+        private void Wait(double duration)
+        {
+            Data = client.Wait(duration);
+            UpdateGraph();
         }
 
         private void GatherResourceBunch(ResourceBunch bunch)
         {
             if (!bunch.Contains(Location))
                 throw new ArgumentException();
-            var path = Location.DepthSearch(e => e.Data!= null && bunch.Contains(e))
+            var path = Location.DepthSearch(e => e.Data != null && bunch.Contains(e))
                 .GetBigramms()
                 .SelectMany(e =>
-                {
-                    if (e.Item1.IncidentNodes.Contains(e.Item2))
-                        return new List<Direction> { e.Item1.GetDirection(e.Item2) };
-                    return Graph.FindPathTo(Location, Data.MyArmy, e.Item2).Track;
-                })
+                    e.Item1.IncidentNodes.Contains(e.Item2) ?
+                    new List<Direction> { e.Item1.GetDirection(e.Item2) } :
+                    Graph.FindPathTo(Location, Data.MyArmy, e.Item2).Track)
                 .ToList();
             Move(path);
         }
@@ -91,22 +98,20 @@ namespace Homm.Client
                     return;
                 }
                 if (Location.Data.Dwelling != null && Location.Data.Dwelling.UnitType != UnitType.Militia)
-                    BuyArmy();
+                    HireArmy();
             }
         }
 
-        private void BuyArmy()
+        private void HireArmy()
         {
-            if (Location.Data.Dwelling != null)
-            {
-                var unitsToHire = Math.Min(Metrics.GetAvailableToBuy(Location.Data.Dwelling.UnitType, Data.MyTreasury),
-                    Location.Data.Dwelling.AvailableToBuyCount);
-                if (unitsToHire > 0)
-                {
-                    Data = client.HireUnits(unitsToHire);
-                    UpdateGraph();
-                }
-            }
+            if (Location.Data.Dwelling == null) return;
+
+            var unitsToHire = Math.Min(Metrics.GetAvailableToBuy(Location.Data.Dwelling.UnitType, Data.MyTreasury),
+                Location.Data.Dwelling.AvailableToBuyCount);
+            if (unitsToHire <= 0) return;
+
+            Data = client.HireUnits(unitsToHire);
+            UpdateGraph();
         }
 
         private void UpdateGraph()
@@ -122,13 +127,13 @@ namespace Homm.Client
             return GetMostProfitablePath(results.Select(CreatePath));
         }
 
-        private Path GetBestPathToBarrack()
+        private Path GetBestPathToDwelling()
         {
             var results = Graph.FindPathsToDwellings(Location, Data.MyArmy);
             return GetMostProfitablePath(results.Select(CreatePath));
         }
 
-        private Path GetBestPathToArmy()
+        private Path GetBestPathToEnemyArmy()
         {
             var results = Graph.FindPathsToArmies(Location, Data.MyArmy);
             return GetMostProfitablePath(results.Select(CreatePath));
@@ -140,7 +145,7 @@ namespace Homm.Client
             return GetMostProfitablePath(results.Select(CreatePath));
         }
 
-        private Path GetBestPathToResurceBunch()
+        private Path GetBestPathToResourceBunch()
         {
             var results = Graph.FindPathsToResourceBunches(Location, Data.MyArmy).ToList();
             return GetMostProfitablePath(results.Select(e => CreatePath(e.Item1, e.Item2)));
@@ -166,45 +171,18 @@ namespace Homm.Client
         #endregion
 
         #region Logging
-        static void Print(HommSensorData data)
+
+        private static void Print(HommSensorData data)
         {
             Console.WriteLine("---------------------------------");
-
+            Console.WriteLine($"Current time: {(int)data.WorldCurrentTime}");
+            var heroHealth = data.IsDead ? "dead" : "live";
+            Console.WriteLine($"You are {heroHealth}");
             Console.WriteLine($"You are here: ({data.Location.X},{data.Location.Y})");
-
             Console.WriteLine($"You have {data.MyTreasury.Select(z => z.Value + " " + z.Key).Aggregate((a, b) => a + ", " + b)}");
-
-            var location = data.Location.ToLocation();
-
-            Console.Write("W: ");
-            Console.WriteLine(GetObjectAt(data.Map, location.NeighborAt(Direction.Up)));
-
-            Console.Write("E: ");
-            Console.WriteLine(GetObjectAt(data.Map, location.NeighborAt(Direction.RightUp)));
-
-            Console.Write("D: ");
-            Console.WriteLine(GetObjectAt(data.Map, location.NeighborAt(Direction.RightDown)));
-
-            Console.Write("S: ");
-            Console.WriteLine(GetObjectAt(data.Map, location.NeighborAt(Direction.Down)));
-
-            Console.Write("A: ");
-            Console.WriteLine(GetObjectAt(data.Map, location.NeighborAt(Direction.LeftDown)));
-
-            Console.Write("Q: ");
-            Console.WriteLine(GetObjectAt(data.Map, location.NeighborAt(Direction.LeftUp)));
         }
 
-        static string GetObjectAt(MapData map, Location location)
-        {
-            if (location.X < 0 || location.X >= map.Width || location.Y < 0 || location.Y >= map.Height)
-                return "Outside";
-            return map.Objects.
-                Where(x => x.Location.X == location.X && x.Location.Y == location.Y)
-                .FirstOrDefault()?.ToString() ?? "Nothing";
-        }
-
-        static void OnInfo(string infoMessage)
+        private static void OnInfo(string infoMessage)
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine(infoMessage);

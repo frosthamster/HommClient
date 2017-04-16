@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using HoMM;
 
 namespace Homm.Client
 {
-    public static class IEnumerableExtensions
+    public static class EnumerableExtensions
     {
         public static IEnumerable<Tuple<T, T>> GetBigramms<T>(this IEnumerable<T> items)
         {

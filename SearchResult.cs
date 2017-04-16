@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Linq;
 using HoMM;
 
 namespace Homm.Client
@@ -10,10 +10,10 @@ namespace Homm.Client
         public List<Direction> Track { get; }
         public List<Node> NodeChain { get; }
 
-        public SearchResult(List<Direction> track, List<Node> nodeChain, Node destination)
+        public SearchResult(IEnumerable<Direction> track, List<Node> nodeChain, Node destination)
         {
             Destination = destination;
-            Track = track;
+            Track = track.ToList();
             NodeChain = nodeChain;
         }
     }

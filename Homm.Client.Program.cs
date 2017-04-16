@@ -15,7 +15,7 @@ namespace Homm.Client
             {
                 try
                 {
-                    controller.DoBestStep();
+                    controller.MakeBestStep();
                 }
                 catch (CVARC.V2.ClientException)
                 {

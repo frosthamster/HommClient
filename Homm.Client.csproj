@@ -56,7 +56,7 @@
     <Compile Include="GameController.cs" />
     <Compile Include="Graph.cs" />
     <Compile Include="Homm.Client.Program.cs" />
-    <Compile Include="IEnumerableExtensions.cs" />
+    <Compile Include="EnumerableExtensions.cs" />
     <Compile Include="Path.cs" />
     <Compile Include="PrioritiesConstants.cs" />
     <Compile Include="ResourceBunch.cs" />
